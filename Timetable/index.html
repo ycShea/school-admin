@@ -5,186 +5,105 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Timetable PDF → Excel</title>
 <style>
-  :root { --bg:#f6f7f9; --card:#ffffff; --text:#1c2430; --muted:#5b6675; --line:#d9dee6; --accent:#1f3864; --accent-text:#ffffff; --ok:#1b7f3b; --warn:#a15c00; --err:#b3261e; --drop:#eef2fa; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#14181f; --card:#1d232d; --text:#e8ecf2; --muted:#9aa6b6; --line:#323b49; --accent:#7ea6ff; --accent-text:#0d1420; --ok:#5fd18a; --warn:#f0b25a; --err:#ff8a80; --drop:#232b38; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; line-height:1.5; }
-  .tabs { position:sticky; top:0; z-index:5; display:flex; gap:4px; padding:8px 18px 0; background:var(--card); border-bottom:1px solid var(--line); overflow-x:auto; }
-  .tab { appearance:none; border:1px solid transparent; border-bottom:0; background:transparent; color:var(--muted); padding:10px 18px; font:inherit; font-weight:600; font-size:.95rem; cursor:pointer; border-radius:8px 8px 0 0; white-space:nowrap; }
-  .tab:hover { background:var(--drop); }
-  .tab[aria-selected="true"] { color:var(--accent); background:var(--bg); border-color:var(--line); margin-bottom:-1px; border-bottom:2px solid var(--bg); box-shadow:inset 0 3px 0 var(--accent); }
-  main { max-width:860px; margin:0 auto; padding:24px 18px 60px; }
-  h1 { font-size:1.5rem; margin:0 0 4px; }
-  .sub { color:var(--muted); margin:0 0 22px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
-  .card h2 { font-size:1rem; margin:0 0 10px; }
-  .drop { display:block; border:2px dashed var(--line); background:var(--drop); border-radius:12px; padding:34px 16px; text-align:center; cursor:pointer; transition:border-color .15s; }
-  .drop.over, .drop:hover { border-color:var(--accent); }
-  .drop strong { display:block; font-size:1.05rem; }
-  .drop span { color:var(--muted); font-size:.9rem; }
-  input[type=file] { display:none; }
-  .btn { background:var(--accent); color:var(--accent-text); border:0; border-radius:8px; padding:11px 20px; font-size:1rem; font-weight:600; cursor:pointer; }
+  :root { --text:#1c2430; --muted:#5b6675; --line:#d9dee6; --accent:#1f3864; --err:#b3261e; --ok:#1b7f3b; --warn:#a15c00; --drop:#eef2fa; --bg:#f6f7f9; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); font-family:Arial,Helvetica,sans-serif; font-size:14px; color:var(--text); }
+  main { max-width:940px; margin:0 auto; padding:22px 18px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:15px; margin:0 0 8px; }
+  .sub { color:var(--muted); margin:0 0 14px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin-bottom:12px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:6px 0; }
+  .row > label.lbl { width:120px; font-weight:bold; }
+  .btn { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:10px 18px; font-size:14px; font-weight:bold; cursor:pointer; }
   .btn[disabled] { opacity:.45; cursor:not-allowed; }
-  .btn.sec { background:transparent; color:var(--accent); border:1px solid var(--line); font-weight:500; padding:8px 14px; font-size:.9rem; }
-  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-  .muted { color:var(--muted); font-size:.9rem; }
-  .status { min-height:1.4em; margin:6px 0 0; }
-  .ok { color:var(--ok); } .warn { color:var(--warn); } .err { color:var(--err); }
-  progress { width:100%; height:10px; margin-top:10px; }
-  table { border-collapse:collapse; width:100%; font-size:.85rem; }
-  th, td { border-bottom:1px solid var(--line); padding:5px 8px; text-align:left; white-space:nowrap; }
-  th { color:var(--muted); font-weight:600; }
-  .scroll { overflow-x:auto; }
-  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:12px; }
-  .stat { background:var(--drop); border-radius:10px; padding:10px 12px; }
-  .stat b { display:block; font-size:1.3rem; }
-  ul.w { margin:6px 0 0 18px; padding:0; font-size:.88rem; }
-  table.mini { width:auto; min-width:220px; margin:0 0 10px; }
-  table.mini td:last-child, table.mini th:last-child { text-align:right; }
-  .row-end { display:flex; justify-content:flex-end; margin:6px 0 2px; }
-  .add-free { border:1px dashed var(--line); background:transparent; color:var(--accent); border-radius:8px; padding:8px 16px; font:inherit; font-weight:600; font-size:.92rem; cursor:pointer; white-space:nowrap; }
-  .add-free:hover { background:var(--drop); border-color:var(--accent); }
-  .confirm { border:1px solid var(--err); border-radius:10px; padding:10px 14px; margin:0 0 10px; }
-  .chk { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--line); border-radius:8px; cursor:pointer; background:var(--drop); font-weight:600; }
-  .chk input { width:16px; height:16px; accent-color:var(--accent); }
-  select { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); }
-  .mapblock { margin:10px 0 6px; }
+  .btn.sec { background:#fff; color:var(--accent); border:1px solid var(--line); font-weight:normal; padding:7px 12px; }
+  .warnbox { border:1px solid var(--warn); background:#fff8ec; border-radius:8px; padding:8px 12px; margin:8px 0; }
+  .warnbox b { color:var(--warn); }
+  .warnline { color:var(--warn); font-weight:bold; margin:0 0 6px 130px; font-size:12px; }
+  progress { width:100%; height:10px; margin-top:6px; }
+  #log { border:1px solid var(--line); border-radius:8px; padding:8px 10px; height:230px; overflow:auto; background:#fff; font-size:13px; margin-top:10px; }
+  #log div { margin:2px 0; } .err { color:var(--err); font-weight:bold; } .ok { color:var(--ok); } .warn { color:var(--warn); } .muted { color:var(--muted); }
+  /* the lines that matter at the end of an import: big, bold and on a coloured band */
+  #log .hl, .hl { font-size:16px; font-weight:bold; color:#1c2430; background:#fff1a8; border-left:7px solid #e0a800; padding:7px 10px; margin:7px 0; border-radius:4px; }
+  #log .hl-done { font-size:20px; background:#bfeccb; border-left-color:#1b7f3b; }
+  #log .hl-link { display:block; font-size:17px; font-weight:bold; margin:7px 4px; }
+  #log .hl-link a { color:#0b57d0; }
+  .hl.green { background:#bfeccb; border-left-color:#1b7f3b; font-size:17px; }
+  input[type=text] { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; width:360px; }
+  input[type=file] { font:inherit; }
+  select { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+  .chk { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:var(--drop); font-weight:bold; cursor:pointer; }
+  table { border-collapse:collapse; font-size:12px; } th, td { border-bottom:1px solid var(--line); padding:4px 8px; text-align:left; white-space:nowrap; } th { color:var(--muted); }
+  .stats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; } .stat { background:var(--drop); border-radius:8px; padding:6px 10px; } .stat b { display:block; font-size:16px; }
+  .confirm { border:1px solid var(--err); border-radius:8px; padding:8px 12px; margin:8px 0; }
+  ul.w { margin:4px 0 0 18px; padding:0; }
+  .modal { position:fixed; inset:0; background:rgba(20,28,40,.55); display:flex; align-items:flex-start; justify-content:center; padding:24px 12px; overflow:auto; z-index:20; }
+  .modalbox { background:#fff; border-radius:12px; max-width:800px; width:100%; padding:16px 20px 20px; }
   [hidden] { display:none !important; }
 </style>
 </head>
 <body>
-<nav class="tabs" role="tablist" aria-label="Timetable type">
-  <button class="tab" role="tab" id="tab-teacher" aria-selected="true" aria-controls="panel-teacher" data-tab="teacher">Teacher Timetable PDF → Excel</button>
-  <button class="tab" role="tab" id="tab-class" aria-selected="false" aria-controls="panel-class" data-tab="class" tabindex="-1">Class Timetable PDF → Excel</button>
-  <button class="tab" role="tab" id="tab-free" aria-selected="false" aria-controls="panel-free" data-tab="free" tabindex="-1" hidden>Free lesson attendance</button>
-</nav>
 <main>
+<h1>Timetable PDF → Excel</h1>
+<p class="sub">Both PDFs are read in your browser and are not uploaded anywhere. The result is Excel files: one database workbook and, if ticked, one file of class timetables (one sheet per class) and one file of teacher timetables (one sheet per teacher).</p>
 
-<!-- ===================== TEACHER TAB ===================== -->
-<section id="panel-teacher" role="tabpanel" aria-labelledby="tab-teacher">
-  <h1>Teacher Timetable PDF → Excel</h1>
-  <p class="sub">Upload the aSc teacher-timetable PDF and download (1) one timetable sheet per teacher and (2) a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching | Lesson/Meeting/Support). Teacher names are read from the PDF itself. Everything runs in your browser.</p>
+<div class="card">
+  <h2>1. The two PDFs (both are required)</h2>
+  <div class="row"><label class="lbl" for="cpdf">Class PDF</label><input type="file" id="cpdf" accept="application/pdf,.pdf"></div>
+  <div id="warnC" class="warnline" hidden></div>
+  <div class="row"><label class="lbl" for="tpdf">Teacher PDF</label><input type="file" id="tpdf" accept="application/pdf,.pdf"></div>
+  <div id="warnT" class="warnline" hidden></div>
+</div>
 
-  <div class="card">
-    <h2>1. Choose the PDF</h2>
-    <label class="drop" id="t-drop" for="t-pdf">
-      <strong>Drop the PDF here, or click to choose</strong>
-      <span>e.g. 2627_T1_Teacher_v2.pdf (one page per teacher)</span>
-    </label>
-    <input type="file" id="t-pdf" accept="application/pdf,.pdf">
-    <progress id="t-prog" value="0" max="1" hidden></progress>
-    <p id="t-status" class="status muted" role="status" aria-live="polite"></p>
+<div class="card">
+  <h2>2. Excel files</h2>
+  <div class="row"><label class="lbl" for="nameD">Database file</label><input type="text" id="nameD" placeholder="(Class PDF name)_database"> <span class="muted">Teacher DB, Class Lessons, Free lesson attendance, Teacher Lookup, DB Summary, Notes</span></div>
+  <label><input type="checkbox" id="mk" checked> Also create the two timetable files (one sheet per class, one sheet per teacher)</label>
+  <div id="mkopts">
+    <div class="row"><label class="lbl" for="nameC">Class file</label><input type="text" id="nameC" placeholder="(Class PDF name)_class_timetables"></div>
+    <div class="row"><label class="lbl" for="nameT">Teacher file</label><input type="text" id="nameT" placeholder="(Teacher PDF name)_teacher_timetables"></div>
   </div>
+</div>
 
-  <div class="card">
-    <h2>2. Teacher list (CSV)</h2>
-    <p class="muted" style="margin-top:0">One list of teacher initials, names and departments (<code>Initial,Name,Department</code>), shared by the Teacher and Class tabs. It is created automatically when you read a Teacher PDF and is used to fill the “Teacher Name” column in the class database. You can also choose your own CSV. When a Teacher PDF is read and a list is already loaded, the PDF is checked against the list.</p>
-    <div class="row">
-      <input type="file" id="t-names" accept=".csv,text/csv">
-      <label for="t-names" class="btn sec">Choose teacher CSV</label>
-      <button type="button" class="btn sec" id="t-csv">Download sample CSV</button>
-    </div>
-    <p id="t-listInfo" class="muted" style="margin:10px 0 0">No teacher list loaded yet.</p>
-  </div>
-
-  <div class="card" id="t-result" hidden>
-    <h2>3. Result</h2>
-    <div class="stats" id="t-stats"></div>
-    <div id="t-warns"></div>
-    <div class="row" style="margin:12px 0">
-      <button class="btn" id="t-dl2" disabled>Download teacher timetables</button>
-      <button class="btn" id="t-dl" disabled>Download teacher database</button>
-      
-    </div>
-    <p class="muted" id="t-files" style="margin:0 0 6px"></p>
-    <h2 style="margin-top:16px">Preview (first 10 rows)</h2>
-    <div class="scroll"><table id="t-prev"></table></div>
-  </div>
-</section>
-
-<!-- ===================== CLASS TAB ===================== -->
-<section id="panel-class" role="tabpanel" aria-labelledby="tab-class" hidden>
-  <h1>Class Timetable PDF → Excel</h1>
-  <p class="sub">Upload the aSc class-timetable PDF and download (1) one timetable sheet per class and (2) a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching). Everything runs in your browser; the PDF is not uploaded anywhere.</p>
-
-  <div class="card">
-    <h2>1. Choose the PDF</h2>
-    <label class="drop" id="c-drop" for="c-pdf">
-      <strong>Drop the PDF here, or click to choose</strong>
-      <span>e.g. 2627_T1_Class_v2.pdf (one page per class)</span>
-    </label>
-    <input type="file" id="c-pdf" accept="application/pdf,.pdf">
-    <progress id="c-prog" value="0" max="1" hidden></progress>
-    <p id="c-status" class="status muted" role="status" aria-live="polite"></p>
-  </div>
-
-  <div class="card">
-    <h2>2. Teacher list (CSV)</h2>
-    <p class="muted" style="margin-top:0">One list of teacher initials, names and departments (<code>Initial,Name,Department</code>), shared by the Teacher and Class tabs. It is created automatically when you read a Teacher PDF and is used to fill the “Teacher Name” column in the class database. You can also choose your own CSV. When a Teacher PDF is read and a list is already loaded, the PDF is checked against the list.</p>
-    <div class="row">
-      <input type="file" id="c-names" accept=".csv,text/csv">
-      <label for="c-names" class="btn sec">Choose teacher CSV</label>
-      <button type="button" class="btn sec" id="c-csv">Download sample CSV</button>
-    </div>
-    <p id="c-listInfo" class="muted" style="margin:10px 0 0">No teacher list loaded yet.</p>
-  </div>
-
-  <div class="card" id="c-result" hidden>
-    <h2>3. Result</h2>
-    <div class="stats" id="c-stats"></div>
-    <div id="c-warns"></div>
-    <div class="row" style="margin:12px 0">
-      <button class="btn" id="c-dl2" disabled>Download class timetables</button>
-      <button class="btn" id="c-dl" disabled>Download class database</button>
-      <span class="muted" id="c-dlInfo"></span>
-    </div>
-    <div class="row-end"><button type="button" class="add-free" id="tab-add" title="Create the Free lesson attendance tab from this Class PDF" hidden>＋ Free lesson attendance</button></div>
-    <p class="muted" id="c-files" style="margin:0 0 6px"></p>
-    <h2 style="margin-top:16px">Preview (first 10 rows)</h2>
-    <div class="scroll"><table id="c-prev"></table></div>
-  </div>
-</section>
-
-
-<!-- ===================== FREE LESSON ATTENDANCE TAB ===================== -->
-<section id="panel-free" role="tabpanel" aria-labelledby="tab-free" hidden>
-  <h1>Free lesson attendance</h1>
-  <p class="sub">Built from the Class PDF you read. One row per class, day and period (<code>Subject | Day | Period</code>), where Subject is the class and the subject, for example <code>S4A-MA</code>. For S4–S6 the electives are shown as E1, E2 or E3. Everything runs in your browser.</p>
-
-  <div class="card">
-    <div class="row" style="margin-bottom:10px">
-      <h2 style="margin:0">1. Levels</h2>
-      <button type="button" class="btn sec" id="f-all">Select all</button>
-      <button type="button" class="btn sec" id="f-none">Unselect all</button>
-    </div>
-    <div class="row" id="f-levels"></div>
-    <p class="muted" style="margin:10px 0 0">S4–S6 are ticked by default. S1–S3 subjects are shown as printed (for example <code>S1H-ICT</code>).</p>
-  </div>
-
-  <div class="card" id="f-mapcard" hidden>
-    <h2>2. Map the electives</h2>
-    <p class="muted" style="margin-top:0">These classes have no E1/E2/E3 block lessons, so the number cannot be worked out from the timetable. Choose the number for each subject. The defaults are PHY and EC/PHY → E1, CHEM → E2, BIO → E3. A class that has two blocks gets the missing number automatically.</p>
-    <div id="f-maps"></div>
-  </div>
-
-  <div class="card">
-    <h2 id="f-resultTitle">2. Result</h2>
-    <div class="stats" id="f-stats"></div>
-    <div id="f-warns"></div>
-    <div class="row" style="margin:12px 0">
-      <button class="btn" id="f-dl">Download free lesson attendance</button>
-    </div>
-    <div class="confirm" id="f-confirm" hidden>
-      <p style="margin:0 0 8px"><b id="f-confirmText"></b></p>
-      <div class="row"><button type="button" class="btn" id="f-yes">Yes, download anyway</button><button type="button" class="btn sec" id="f-no">No, go back</button></div>
-    </div>
-    <p class="muted" id="f-files" style="margin:0 0 6px"></p>
-    <h2 style="margin-top:16px">Preview (first 10 rows)</h2>
-    <div class="scroll"><table id="f-prev"></table></div>
-  </div>
-</section>
-
+<div class="row"><button class="btn" id="go" disabled>Import</button><span id="libwarn" class="err" hidden>The PDF reader (pdf.js) could not be loaded. Check your internet connection and reload the page.</span></div>
+<progress id="prog" value="0" max="1" hidden></progress>
+<div id="log" aria-live="polite"></div>
+<div class="row" id="after" hidden>
+  <button class="btn" id="toFree">Open Free lesson attendance ▶</button>
+</div>
 </main>
+
+<!-- ===================== FREE LESSON ATTENDANCE WINDOW ===================== -->
+<div class="modal" id="freeModal" hidden role="dialog" aria-modal="true" aria-label="Free lesson attendance">
+ <div class="modalbox">
+  <h1>Free lesson attendance</h1>
+  <p class="sub">Built from the class lessons of the Class PDF. One row per class, day and period (<code>Subject | Day | Period</code>), for example <code>S4A-MA</code>. For S4–S6 the electives are shown as E1, E2 or E3. The result is added to the database workbook as the sheet <b>Free lesson attendance</b> (an existing sheet with that name is replaced).</p>
+  <div id="fExist" class="warnbox" hidden></div>
+  <div class="card">
+    <div class="row" style="margin-bottom:8px"><h2 style="margin:0">1. Levels</h2>
+      <button type="button" class="btn sec" id="fAll">Select all</button><button type="button" class="btn sec" id="fNone">Unselect all</button></div>
+    <div class="row" id="fLevels"></div>
+  </div>
+  <div class="card" id="fMapCard" hidden>
+    <h2>2. Map the electives</h2>
+    <p class="muted" style="margin-top:0">These classes have no E1/E2/E3 block lessons, so the number cannot be worked out. Choose it for each subject. Defaults: PHY and EC/PHY → E1, CHEM → E2, BIO → E3.</p>
+    <div id="fMaps"></div>
+  </div>
+  <div class="card">
+    <h2 id="fResTitle">2. Result</h2>
+    <div class="stats" id="fStats"></div>
+    <div id="fWarns"></div>
+    <div class="row" style="margin:8px 0"><button class="btn" id="fWrite">Add sheet “Free lesson attendance” to the database workbook</button><button class="btn sec" id="fClose">Close</button></div>
+    <div class="confirm" id="fConfirm" hidden>
+      <p style="margin:0 0 6px"><b id="fConfirmText"></b></p>
+      <div class="row"><button class="btn" id="fYes">Yes, add it anyway</button><button class="btn sec" id="fNo">No, go back</button></div>
+    </div>
+    <div id="fDone"></div>
+    <h2 style="margin-top:12px">Preview (first 10 rows)</h2>
+    <table id="fPrev"></table>
+  </div>
+ </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -1130,304 +1049,417 @@ function finalizeTeacherCards(pagesResult){
     parseTeacherPage, finalizeTeacherCards, teacherRows, validateTeacher, buildTeacherCsv, namesToCsv, namesFromPages, verifyTeacherList, buildTeacherDbWorkbook, buildTeacherTimetableWorkbook, freeAnalyse, freeRows, freeDefaultE, buildFreeWorkbook, DAYS, TIMES };
 })(typeof window !== 'undefined' ? window : globalThis);
 
+
+</script>
+<script>
+/* Turns an ExcelJS workbook (built in the page, or loaded from an .xlsx exported by the GitHub tool)
+   into plain "sheet specs" that Code.gs can write with a handful of Google Sheets calls per sheet. */
+(function (root) {
+  'use strict';
+  function colLetter(n) { var s = ''; while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+  function a1(r1, c1, r2, c2) { return colLetter(c1) + r1 + ':' + colLetter(c2) + r2; }
+  function hex(c) { return (c && c.argb) ? '#' + String(c.argb).slice(-6) : null; }
+  function runsOf(arr) {            // arr[i-1] = value for index i (1-based) -> [{start,count,v}] for non-null values
+    var out = [];
+    for (var i = 1; i <= arr.length; i++) {
+      var v = arr[i - 1]; if (v == null) continue;
+      var last = out[out.length - 1];
+      if (last && last.v === v && last.start + last.count === i) last.count++; else out.push({ start: i, count: 1, v: v });
+    }
+    return out;
+  }
+  function filterRef(f) {
+    if (!f) return null;
+    if (typeof f === 'string') return f;
+    var from = f.from, to = f.to;
+    if (typeof from === 'string') return from + ':' + to;
+    if (from && to) return a1(from.row, from.column || from.col, to.row, to.column || to.col);
+    return null;
+  }
+
+  function sheetSpec(ws, name, fix) {
+    fix = fix || function (x) { return x; };
+    var nR = Math.max(ws.rowCount || 1, 1), nC = Math.max(ws.columnCount || 1, 1);
+    var values = [], styleIdx = [], styles = [], keyIdx = {}, bd = [], fres = {};
+    var col = []; for (var c0 = 0; c0 < nC; c0++) col.push({ f: false, s: false, n: false });
+    for (var r = 1; r <= nR; r++) {
+      var vr = [], sr = [], br = [];
+      for (var c = 1; c <= nC; c++) {
+        var cell = ws.getCell(r, c), v = cell.value, out = '';
+        var slave = cell.master && cell.master.address && cell.master.address !== cell.address;
+        if (!slave && v !== null && v !== undefined) {
+          if (typeof v === 'object') {
+            if (v.formula) { out = '=' + fix(v.formula); if (r > 1) col[c - 1].f = true; if (v.result !== undefined && v.result !== null) fres[r + ',' + c] = v.result; }
+            else if (v.richText) out = v.richText.map(function (t) { return t.text; }).join('');
+            else if (v.result !== undefined && v.result !== null) out = v.result;
+            else if (v.text) out = v.text;
+            else out = '';
+          } else out = v;
+        }
+        if (r > 1 && !(typeof out === 'string' && out.charAt(0) === '=')) {
+          if (typeof out === 'string' && out !== '') col[c - 1].s = true;
+          else if (typeof out === 'number') col[c - 1].n = true;
+        }
+        vr.push(out);
+        var f = cell.font || {}, fl = cell.fill || {}, al = cell.alignment || {}, bo = cell.border || {};
+        var st = {
+          bg: (fl.type === 'pattern' && fl.pattern === 'solid') ? hex(fl.fgColor) : null,
+          fg: hex(f.color), b: !!f.bold, i: !!f.italic, sz: f.size || 10, fam: f.name || 'Arial',
+          h: al.horizontal === 'center' ? 'center' : al.horizontal === 'right' ? 'right' : al.horizontal === 'left' ? 'left' : 'normal',
+          v: (al.vertical === 'middle' || al.vertical === 'center') ? 'middle' : al.vertical === 'top' ? 'top' : 'bottom',
+          w: !!al.wrapText
+        };
+        var key = JSON.stringify(st);
+        if (keyIdx[key] === undefined) { keyIdx[key] = styles.length; styles.push(st); }
+        sr.push(keyIdx[key]);
+        br.push(!!(bo.top || bo.left || bo.bottom || bo.right));
+      }
+      values.push(vr); styleIdx.push(sr); bd.push(br);
+    }
+    // columns that hold only text are formatted as plain text, so "301,302" or "A1" are not turned into numbers/dates
+    var textRanges = [], c1 = 0;
+    for (var cc = 1; cc <= nC + 1; cc++) {
+      var isText = cc <= nC && col[cc - 1].s && !col[cc - 1].f && !col[cc - 1].n;
+      if (isText && !c1) c1 = cc;
+      if (!isText && c1) { textRanges.push(a1(1, c1, nR, cc - 1)); c1 = 0; }
+    }
+    // rectangles of cells that have borders
+    var borders = [], rr = 0;
+    while (rr < nR) {
+      var sig = bd[rr].map(function (x) { return x ? '1' : '0'; }).join('');
+      var end = rr; while (end + 1 < nR && bd[end + 1].map(function (x) { return x ? '1' : '0'; }).join('') === sig) end++;
+      if (sig.indexOf('1') >= 0) {
+        var s0 = -1;
+        for (var k = 0; k <= nC; k++) {
+          var on = k < nC && sig.charAt(k) === '1';
+          if (on && s0 < 0) s0 = k;
+          if (!on && s0 >= 0) { borders.push(a1(rr + 1, s0 + 1, end + 1, k)); s0 = -1; }
+        }
+      }
+      rr = end + 1;
+    }
+    var widths = []; for (var wi = 1; wi <= nC; wi++) { var cw = ws.getColumn(wi).width; widths.push(cw ? Math.round(cw * 7 + 5) : 100); }
+    var colWidths = runsOf(widths).map(function (x) { return { start: x.start, count: x.count, px: x.v }; });
+    var heights = [], explicit = 0;
+    for (var hr = 1; hr <= nR; hr++) { var h = ws.rows && ws.rows[hr - 1] ? ws.rows[hr - 1].height : (ws.getRow(hr).height); if (h) { heights.push(Math.round(h * 4 / 3)); explicit++; } else heights.push(null); }
+    var autoRows = false, rowHeights;
+    if (explicit > 60) { autoRows = true; rowHeights = heights[0] ? [{ start: 1, count: 1, px: heights[0] }] : []; }
+    else rowHeights = runsOf(heights).map(function (x) { return { start: x.start, count: x.count, px: x.v }; });
+    var view = (ws.views && ws.views[0]) || {};
+    var model = ws.model || {};
+    return {
+      name: name, cols: nC, values: values, styles: styles, styleIdx: styleIdx, textRanges: textRanges, borders: borders,
+      colWidths: colWidths, rowHeights: rowHeights, autoRows: autoRows,
+      frozenRows: view.state === 'frozen' ? (view.ySplit || 0) : 0, frozenCols: view.state === 'frozen' ? (view.xSplit || 0) : 0,
+      merges: (model.merges || []).slice(), filter: filterRef(ws.autoFilter), fres: fres
+    };
+  }
+
+  // order of the tabs at the front of the spreadsheet (a sheet that does not exist yet is skipped by Code.gs)
+  var DB_ORDER = ['Teacher DB', 'Class Lessons', 'Free lesson attendance', 'Teacher Lookup', 'DB Summary', 'Notes'];
+
+  // formulas copied from the exported "Timetable" sheet must point at the new sheet name
+  function fixTeacherDb(f) { return f.replace(/\bTimetable!/g, "'Teacher DB'!"); }
+
+  // one combined Notes sheet: [{t: text, b: bold}]
+  function notesSpec(lines) {
+    var styles = [
+      { bg: null, fg: null, b: false, i: false, sz: 10, fam: 'Arial', h: 'normal', v: 'top', w: true },
+      { bg: null, fg: null, b: true, i: false, sz: 10, fam: 'Arial', h: 'normal', v: 'top', w: true }
+    ];
+    return {
+      name: 'Notes', cols: 1, values: lines.map(function (l) { return [l.t]; }), styles: styles,
+      styleIdx: lines.map(function (l) { return [l.b ? 1 : 0]; }), textRanges: ['A1:A' + lines.length], borders: [], merges: [],
+      colWidths: [{ start: 1, count: 1, px: 900 }], rowHeights: [], autoRows: true, frozenRows: 0, frozenCols: 0, filter: null
+    };
+  }
+  function notesLinesFrom(ws) {
+    var out = [];
+    if (!ws) return out;
+    for (var r = 1; r <= ws.rowCount; r++) { var cell = ws.getCell(r, 1); out.push({ t: cell.value == null ? '' : String(cell.value), b: !!(cell.font && cell.font.bold) }); }
+    return out;
+  }
+  // info: { sources: 'Teacher PDF: … | Class PDF: …', check: 'text about the PDF cross-check' }
+  function buildNotes(books, info) {
+    var base = notesLinesFrom((books.teacherDB && books.teacherDB.getWorksheet('Notes')) || (books.classDB && books.classDB.getWorksheet('Notes')));
+    var lines = [{ t: 'Notes', b: true }, { t: info.sources, b: false }, { t: '', b: false },
+      { t: 'Sheets in this spreadsheet', b: true },
+      { t: 'Teacher DB: one row per teacher, day and period (lessons, meetings and support).', b: false },
+      { t: 'DB Summary: how many rows have no venue (or subject) of their own, by subject.', b: false },
+      { t: 'Class Lessons: one row per lesson per class, as printed in the Class PDF (used by Free lesson attendance).', b: false },
+      { t: 'Teacher Lookup: teacher code, name and department (from the Teacher PDF).', b: false },
+      { t: 'Free lesson attendance: written from Timetable \u25B8 Free lesson attendance\u2026', b: false },
+      { t: 'The class timetables and the teacher timetables are in two separate Google Spreadsheets created by the import.', b: false },
+      { t: '', b: false }];
+    // skip the title, source line and blank line of the exported notes (first three lines)
+    base.slice(3).forEach(function (l) { lines.push(l); });
+    if (info.check) { lines.push({ t: '', b: false }); lines.push({ t: 'Cross-check of the two PDFs', b: true }); lines.push({ t: info.check, b: false }); }
+    return notesSpec(lines);
+  }
+
+  // books: { teacherDB, classDB } (ExcelJS workbooks) -> specs of the sheets of the database workbook
+  function buildDbSpecs(books, info) {
+    var db = [];
+    function add(wb, src, dst, fix) { var ws = wb && wb.getWorksheet(src); if (ws) db.push(sheetSpec(ws, dst, fix)); }
+    add(books.teacherDB, 'Teacher Lookup', 'Teacher Lookup');
+    add(books.teacherDB, 'Timetable', 'Teacher DB', fixTeacherDb);
+    add(books.teacherDB, 'Summary', 'DB Summary', fixTeacherDb);
+    add(books.classDB, 'Class Lessons', 'Class Lessons');
+    db.push(buildNotes(books, info || { sources: '', check: '' }));
+    return db;
+  }
+
+  root.ConvertTT = { sheetSpec: sheetSpec, buildDbSpecs: buildDbSpecs, DB_ORDER: DB_ORDER };
+})(window);
+
+</script>
+<script>
+/* Writes sheet specs (see convert.js) into an ExcelJS workbook: the same sheets that the Google Sheets version writes. */
+(function (root) {
+  'use strict';
+  function pxToChars(px) { return Math.max(2, (px - 5) / 7); }
+  function argb(hex) { return hex ? 'FF' + String(hex).replace('#', '').toUpperCase() : undefined; }
+  function parseA1(a) {
+    var m = /^([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/.exec(a); if (!m) return null;
+    function num(s) { var n = 0; for (var i = 0; i < s.length; i++) n = n * 26 + s.charCodeAt(i) - 64; return n; }
+    return { r1: +m[2], c1: num(m[1]), r2: m[4] ? +m[4] : +m[2], c2: m[3] ? num(m[3]) : num(m[1]) };
+  }
+
+  function addSpecSheet(wb, spec) {
+    var frozen = spec.frozenRows || spec.frozenCols;
+    var ws = wb.addWorksheet(spec.name, { views: frozen ? [{ state: 'frozen', xSplit: spec.frozenCols || 0, ySplit: spec.frozenRows || 0 }] : [] });
+    var nR = spec.values.length, nC = spec.cols, widths = [];
+    (spec.colWidths || []).forEach(function (w) { for (var c = w.start; c < w.start + w.count; c++) { ws.getColumn(c).width = pxToChars(w.px); widths[c] = pxToChars(w.px); } });
+    // one font / fill / alignment object per style, shared by all cells that use it
+    var fonts = spec.styles.map(function (s) { var f = { name: s.fam || 'Arial', size: s.sz || 10 }; if (s.b) f.bold = true; if (s.i) f.italic = true; if (s.fg) f.color = { argb: argb(s.fg) }; return f; });
+    var fills = spec.styles.map(function (s) { return s.bg ? { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(s.bg) } } : null; });
+    var aligns = spec.styles.map(function (s) {
+      var a = {}; if (s.h && s.h !== 'normal') a.horizontal = s.h; if (s.v) a.vertical = s.v === 'bottom' ? 'bottom' : s.v; if (s.w) a.wrapText = true; return a;
+    });
+    for (var r = 0; r < nR; r++) {
+      var row = ws.getRow(r + 1);
+      for (var c = 0; c < nC; c++) {
+        var v = spec.values[r][c], si = spec.styleIdx[r][c], cell = row.getCell(c + 1);
+        if (typeof v === 'string' && v.charAt(0) === '=') {
+          var res = spec.fres && spec.fres[(r + 1) + ',' + (c + 1)];
+          cell.value = res === undefined ? { formula: v.slice(1) } : { formula: v.slice(1), result: res };
+        } else if (v !== '' && v !== null && v !== undefined) cell.value = v;
+        cell.font = fonts[si]; if (fills[si]) cell.fill = fills[si]; cell.alignment = aligns[si];
+      }
+    }
+    var edge = { style: 'thin', color: { argb: 'FFBFBFBF' } }, border = { top: edge, left: edge, bottom: edge, right: edge };
+    (spec.borders || []).forEach(function (a) {
+      var p = parseA1(a); if (!p) return;
+      for (var rr = p.r1; rr <= p.r2; rr++) for (var cc = p.c1; cc <= p.c2; cc++) ws.getCell(rr, cc).border = border;
+    });
+    (spec.merges || []).forEach(function (a) { ws.mergeCells(a); });
+    (spec.rowHeights || []).forEach(function (h) { for (var rr = h.start; rr < h.start + h.count; rr++) ws.getRow(rr).height = h.px * 0.75; });
+    if (spec.autoRows) {            // Excel does not fit wrapped rows by itself in a generated file: estimate the height
+      for (var r2 = 2; r2 <= nR; r2++) {
+        var lines = 1;
+        for (var c2 = 0; c2 < nC; c2++) {
+          var st = spec.styles[spec.styleIdx[r2 - 1][c2]], val = spec.values[r2 - 1][c2];
+          if (!st.w || typeof val !== 'string') continue;
+          var per = Math.max(8, Math.floor((widths[c2 + 1] || 12) * 1.05)), n = 0;
+          val.split('\n').forEach(function (ln) { n += Math.max(1, Math.ceil(ln.length / per)); });
+          lines = Math.max(lines, n);
+        }
+        if (lines > 1) ws.getRow(r2).height = Math.min(400, 13.5 * lines + 3);
+      }
+    }
+    if (spec.filter) ws.autoFilter = spec.filter;
+    return ws;
+  }
+
+  // the database workbook: the specs in the agreed tab order (a name that does not exist is skipped)
+  function buildMainWorkbook(ExcelJS, specs, order) {
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'Timetable PDF to Excel';
+    wb.calcProperties = { fullCalcOnLoad: true };
+    var rank = function (n) { var i = order.indexOf(n); return i < 0 ? 999 : i; };
+    specs.slice().sort(function (a, b) { return rank(a.name) - rank(b.name); }).forEach(function (s) { addSpecSheet(wb, s); });
+    return wb;
+  }
+  root.XlsxWriter = { addSpecSheet: addSpecSheet, buildMainWorkbook: buildMainWorkbook };
+})(window);
+
 </script>
 <script>
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  var li = function (s) { return '<li>' + s + '</li>'; };
+  var XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  var busy = false, edited = { D: false, C: false, T: false }, state = null;
 
-  if (window.pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  if (window.pdfjsLib && pdfjsLib.GlobalWorkerOptions) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  function log(msg, cls) { var d = document.createElement('div'); if (cls) d.className = cls; d.textContent = msg; $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight; return d; }
+  function progress(v, max) { var p = $('prog'); p.hidden = false; p.max = max; p.value = v; }
+  function tick() { return new Promise(function (r) { setTimeout(r, 0); }); }     // lets the page repaint between heavy steps
+  function readAB(file) { return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(fr.result); }; fr.onerror = function () { rej(fr.error); }; fr.readAsArrayBuffer(file); }); }
+  var base = function (f) { return f.name.replace(/\.pdf$/i, ''); };
+
+  // ---------------- file-name check (a warning only) ----------------
+  var RE = { class: /class/i, teacher: /teacher/i };
+  function nameWarning(file, kind) {
+    if (!file) return '';
+    var other = kind === 'class' ? 'teacher' : 'class', n = file.name;
+    var label = kind === 'class' ? 'Class' : 'Teacher', otherLabel = kind === 'class' ? 'Teacher' : 'Class';
+    var example = kind === 'class' ? '2627_T1_Class_v9.pdf' : '2627_T1_Teacher_v9.pdf';
+    if (RE[kind].test(n) && !RE[other].test(n)) return '';
+    if (RE[other].test(n) && !RE[kind].test(n))
+      return 'Warning: “' + n + '” looks like a ' + otherLabel + ' PDF, not a ' + label + ' PDF. Are the two files in the wrong boxes?';
+    return 'Warning: the file name does not contain “' + label + '” (expected something like ' + example + '). Check that this is the ' + label + ' PDF.';
+  }
+  function checkNames() {
+    var c = nameWarning($('cpdf').files[0], 'class'), t = nameWarning($('tpdf').files[0], 'teacher');
+    $('warnC').textContent = c; $('warnC').hidden = !c; $('warnT').textContent = t; $('warnT').hidden = !t;
+    return [c, t].filter(Boolean);
   }
 
-  function readFile(file, asText) {
-    return new Promise(function (res, rej) {
-      var fr = new FileReader();
-      fr.onload = function () { res(fr.result); };
-      fr.onerror = function () { rej(fr.error); };
-      if (asText) fr.readAsText(file); else fr.readAsArrayBuffer(file);
-    });
+  // ---------------- options ----------------
+  function fileName(id) { return $(id).value.trim().replace(/[\\/:*?"<>|]/g, '_').replace(/\.xlsx$/i, ''); }
+  function namesOk() {
+    var d = fileName('nameD'), c = fileName('nameC'), t = fileName('nameT');
+    if (!d) return false;
+    return !$('mk').checked || (!!c && !!t && d !== c && d !== t && c !== t);
   }
-  function saveBlob(blob, name) {
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+  function defaultNames() {
+    var c = $('cpdf').files[0], t = $('tpdf').files[0];
+    if (!edited.D && c) $('nameD').value = base(c) + '_database';
+    if (!edited.C && c) $('nameC').value = base(c) + '_class_timetables';
+    if (!edited.T && t) $('nameT').value = base(t) + '_teacher_timetables';
+  }
+  function refresh() {
+    $('go').disabled = busy || !(window.pdfjsLib && window.ExcelJS && $('cpdf').files[0] && $('tpdf').files[0]) || !namesOk();
+    $('mkopts').hidden = !$('mk').checked;
   }
 
-  // ====================== SHARED TEACHER LIST (step 2 of both tabs) ======================
-  var TL = { names: {}, source: null, label: '', leftOut: [] };   // source: null | 'csv' | 'pdf'
-  var pendingTL = null;                                          // list from the Teacher PDF, waiting for the user's Yes / No
-  var prefix = '2627';                                            // taken from the last PDF name when it starts with 4 digits
-  function hasList() { return Object.keys(TL.names).length > 0; }
-
-  function renderList() {
-    var n = Object.keys(TL.names).length, info;
-    if (!n) info = 'No teacher list loaded yet. It is created when you read a Teacher PDF, or choose a CSV.';
-    else if (TL.source === 'pdf') info = 'From ' + TL.label + ': ' + n + ' teachers with codes' +
-      (TL.leftOut.length ? ' (' + TL.leftOut.length + ' without a code are left out: ' + TL.leftOut.join('; ') + ')' : '') + '.';
-    else info = TL.label + ': ' + n + ' teachers.';
-    ['t', 'c'].forEach(function (p) {
-      $(p + '-listInfo').textContent = info;
-      $(p + '-csv').textContent = n ? 'Download teacher list (CSV)' : 'Download sample CSV';
-    });
-    $('c-dlInfo').textContent = n ? 'Teacher names: ' + n + ' loaded.' : 'No teacher list loaded (Teacher Name column will be blank).';
+  // ---------------- the Excel files ----------------
+  var urls = {};
+  function setFile(key, name, blob) {
+    if (urls[key]) URL.revokeObjectURL(urls[key].url);
+    urls[key] = { name: name, url: URL.createObjectURL(blob), size: blob.size };
+    return urls[key];
   }
-  async function handleNames(file) {
-    if (!file) return;
+  async function toBlob(wb) { return new Blob([await wb.xlsx.writeBuffer()], { type: XLSX_MIME }); }
+  async function buildMainBlob() {
+    var specs = state.dbSpecs.concat(state.freeSpec ? [state.freeSpec] : []);
+    return toBlob(XlsxWriter.buildMainWorkbook(ExcelJS, specs, ConvertTT.DB_ORDER));
+  }
+  //  a big download link line (used after "All done.")
+  function downloadLine(key, note) {
+    var f = urls[key], el = state.links[key];
+    if (!el) { el = document.createElement('div'); el.className = 'hl-link'; $('log').appendChild(el); state.links[key] = el; }
+    el.innerHTML = '<a href="' + esc(f.url) + '" download="' + esc(f.name) + '">⬇ ' + esc(f.name) + '</a>' + (note ? ' <span class="muted" style="font-weight:normal;font-size:13px">' + esc(note) + '</span>' : '');
+    $('log').scrollTop = $('log').scrollHeight;
+  }
+
+  // the Teacher PDF and the Class PDF should describe the same lessons
+  function crossCheck(trecs, crecs) {
+    var co = function (r) { return r.sharing > 1 ? 'Y' : 'N'; };
+    var cs = function (s) { return String(s).split('/').filter(Boolean).sort().join('/'); };
+    var key = function (r) { return [r.teacher, r.day, r.period, cs(r.cls), r.venue, r.subject, co(r)].join('\u00a6'); };
+    var A = {}, B = {}, onlyT = 0, onlyC = 0;
+    trecs.filter(function (r) { return r.kind === 'Lesson'; }).forEach(function (r) { A[key(r)] = 1; });
+    crecs.forEach(function (r) { B[key(r)] = 1; });
+    Object.keys(A).forEach(function (k) { if (!B[k]) onlyT++; });
+    Object.keys(B).forEach(function (k) { if (!A[k]) onlyC++; });
+    return { matched: Object.keys(A).length - onlyT, onlyT: onlyT, onlyC: onlyC };
+  }
+
+  async function importPdfs() {
+    var tf = $('tpdf').files[0], cf = $('cpdf').files[0];
+    busy = true; refresh(); $('after').hidden = true; $('log').innerHTML = ''; $('prog').hidden = true;
+    state = null; Object.keys(urls).forEach(function (k) { URL.revokeObjectURL(urls[k].url); }); urls = {};
+    checkNames().forEach(function (w) { log(w, 'warn'); });
     try {
-      var names = TT.parseCsv(await readFile(file, true));
-      if (!Object.keys(names).length) {
-        ['t', 'c'].forEach(function (p) { $(p + '-listInfo').textContent = 'No teachers found in that file. It needs the columns Initial,Name,Department.'; });
-        return;
-      }
-      TL = { names: names, source: 'csv', label: file.name, leftOut: [] };
-      pendingTL = null; if ($('t-ask')) $('t-ask').innerHTML = '';
-      renderList();
-    } catch (e) { ['t', 'c'].forEach(function (p) { $(p + '-listInfo').textContent = 'Could not read that file.'; }); }
-  }
-  function downloadList() {
-    if (hasList()) saveBlob(new Blob([TT.namesToCsv(TL.names)], { type: 'text/csv;charset=utf-8' }), prefix + '_teacher_names.csv');
-    else saveBlob(new Blob(['\uFEFFInitial,Name,Department\r\n'], { type: 'text/csv;charset=utf-8' }), prefix + '_teacher_names_sample.csv');
-  }
-  ['t', 'c'].forEach(function (p) {
-    $(p + '-names').addEventListener('change', function (e) { handleNames(e.target.files[0]); e.target.value = ''; });
-    $(p + '-csv').addEventListener('click', downloadList);
-  });
+      log('Reading the Class PDF…');
+      var cp = await TT.readPdf(pdfjsLib, new Uint8Array(await readAB(cf)), function (i, n) { progress(i, n); });
+      var lessons = [], cproblems = [], withClass = 0;
+      cp.forEach(function (pg, i) { var r = TT.parsePage(pg, i + 1); if (r.cls) withClass++; lessons = lessons.concat(r.lessons); cproblems = cproblems.concat(r.problems); });
+      if (withClass < Math.ceil(cp.length * 0.9))
+        throw new Error('The Class PDF does not look like a class timetable: class names such as S1H were found on only ' + withClass + ' of ' + cp.length + ' pages. Did you choose the Teacher PDF in the Class box?');
+      if (!lessons.length) throw new Error('No lessons found in the Class PDF. Is it the aSc class-timetable PDF?');
+      var cv = TT.validate(lessons), recs = TT.expandRows(lessons);
+      log('Class PDF: ' + cp.length + ' class pages, ' + lessons.length + ' lessons.', 'ok');
+      cproblems.slice(0, 5).forEach(function (p) { log(p, 'warn'); });
+      if (cv.warn.length) log('Overlapping lessons: ' + cv.warn.slice(0, 3).join('; '), 'warn');
+      if (cv.notFull.length) log(cv.notFull.length + ' class-day(s) do not add up to 7 periods (' + cv.notFull.slice(0, 5).join(', ') + ').', 'warn');
 
-  // ---------- generic panel: drop zone, progress, result card, downloads ----------
-  // cfg.analyze(pages, fileName) -> { stats, warnHtml, head, rows, total } ; cfg.btn1 = database, cfg.btn2 = timetables
-  function makePanel(p, cfg) {
-    var state = { ready: false, fileName: '' };
-    var el = function (s) { return $(p + '-' + s); };
-    function setStatus(msg, cls) { var s = el('status'); s.textContent = msg; s.className = 'status ' + (cls || 'muted'); }
-
-    async function handlePdf(file) {
-      if (!file) return;
-      if (!window.pdfjsLib || !window.ExcelJS) { setStatus('The PDF and Excel libraries could not be loaded. Check your internet connection and reload.', 'err'); return; }
-      state.fileName = file.name; state.ready = false;
-      if (cfg.onStart) cfg.onStart();
-      var m = /^(\d{4})/.exec(file.name); prefix = m ? m[1] : '2627';
-      el('result').hidden = true; el('dl').disabled = true; el('dl2').disabled = true;
-      var prog = el('prog'); prog.hidden = false; prog.value = 0;
-      setStatus('Reading ' + file.name + '…');
-      try {
-        var buf = await readFile(file, false);
-        var pages = await TT.readPdf(pdfjsLib, new Uint8Array(buf), function (i, n) { prog.max = n; prog.value = i; setStatus('Reading page ' + i + ' of ' + n + '…'); });
-        var r = cfg.analyze(pages, file.name);
-        if (!r) { setStatus(cfg.emptyMsg, 'err'); prog.hidden = true; return; }
-        state.ready = true;
-        el('stats').innerHTML = r.stats.map(function (s) { return '<div class="stat"><b>' + Number(s[1]).toLocaleString() + '</b>' + s[0] + '</div>'; }).join('');
-        el('warns').innerHTML = r.warnHtml;
-        el('prev').innerHTML = '<tr>' + r.head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr>' +
-          r.rows.map(function (row) { return '<tr>' + row.map(function (c) { return '<td>' + esc(String(c)) + '</td>'; }).join('') + '</tr>'; }).join('');
-        el('result').hidden = false; el('dl').disabled = false; el('dl2').disabled = false;
-        var base = file.name.replace(/\.pdf$/i, '') || 'timetable';
-        el('files').textContent = 'Files: ' + base + cfg.btn2.suffix + '  |  ' + base + cfg.btn1.suffix;
-        setStatus('Done. ' + r.total.toLocaleString() + ' rows ready.', 'ok');
-        if (cfg.onDone) cfg.onDone();
-      } catch (e) {
-        console.error(e); setStatus('Could not read this PDF: ' + (e && e.message ? e.message : e), 'err');
-      }
-      prog.hidden = true;
-    }
-
-    async function save(btn, which) {
-      if (!state.ready) return;
-      var old = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
-      try {
-        var wb = await which.build(state);
-        var buf = await wb.xlsx.writeBuffer();
-        saveBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-          (state.fileName.replace(/\.pdf$/i, '') || 'timetable') + which.suffix);
-      } catch (e) { console.error(e); setStatus('Could not build the Excel file: ' + e.message, 'err'); }
-      btn.textContent = old; btn.disabled = false;
-    }
-
-    var drop = el('drop');
-    el('pdf').addEventListener('change', function (e) { handlePdf(e.target.files[0]); });
-    el('dl').addEventListener('click', function () { return save(el('dl'), cfg.btn1); });
-    el('dl2').addEventListener('click', function () { return save(el('dl2'), cfg.btn2); });
-    ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
-    ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
-    drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) handlePdf(f); });
-
-    return { handlePdf: handlePdf, state: state, downloadDb: function () { return save(el('dl'), cfg.btn1); }, downloadSecond: function () { return save(el('dl2'), cfg.btn2); } };
-  }
-
-  // breakdown of the rows that have no venue/subject of their own, by subject
-  function breakdownHtml(rows) {
-    var by = {};
-    rows.forEach(function (r) { var k = String(r.subject).split('\n')[0]; by[k] = (by[k] || 0) + 1; });
-    var keys = Object.keys(by).sort(function (a, b) { return (by[b] - by[a]) || (a < b ? -1 : a > b ? 1 : 0); });
-    return '<p class="muted" style="margin-bottom:4px"><b>What the ' + rows.length.toLocaleString() + ' rows are</b></p><table class="mini"><tr><th>Subject</th><th>Rows</th></tr>' +
-      keys.map(function (k) { return '<tr><td>' + esc(k) + '</td><td>' + by[k] + '</td></tr>'; }).join('') + '</table>';
-  }
-
-  // ====================== TEACHER TAB ======================
-  var tch = { pages: null, recs: null };
-  function listCheckHtml(rep, label, mode) {
-    if (!rep) return '<p class="muted">No teacher list was loaded, so there was nothing to check. A teacher list was created from this PDF (step 2).</p>';
-    var cap = function (arr) { return arr.slice(0, 8).map(esc).map(li).join('') + (arr.length > 8 ? '<li>… and ' + (arr.length - 8) + ' more</li>' : ''); };
-    var clean = !rep.diffs.length && !rep.notInList.length && !rep.notInPdf.length && !rep.stillNoCode.length;
-    var h = '<p class="' + (clean ? 'ok' : 'warn') + '"><b>Teacher list check</b> (against ' + esc(label) + '): ' + rep.matched + ' of ' + rep.total + ' teacher pages match the list (the list has ' + rep.listCount + ' teachers).</p>';
-    if (rep.diffs.length) h += '<p class="warn" style="margin-bottom:0">Different name or department:</p><ul class="w">' + cap(rep.diffs) + '</ul>';
-    if (rep.notInList.length) h += '<p class="warn" style="margin-bottom:0">In the PDF but not in the list:</p><ul class="w">' + cap(rep.notInList) + '</ul>';
-    if (rep.notInPdf.length) h += '<p class="warn" style="margin-bottom:0">In the list but not in the PDF:</p><ul class="w">' + cap(rep.notInPdf) + '</ul>';
-    if (rep.stillNoCode.length) h += '<p class="warn" style="margin-bottom:0">No code in the PDF and no matching name in the list:</p><ul class="w">' + cap(rep.stillNoCode) + '</ul>';
-    if (rep.recovered.length) h += '<p class="muted" style="margin-bottom:0">Code taken from the list (the PDF has no lessons to work it out from):</p><ul class="w">' + cap(rep.recovered) + '</ul>';
-    if (mode === 'ask') {
-      h += '<div id="t-ask" style="margin:10px 0 4px"><p style="margin:0 0 6px"><b>Replace your uploaded CSV (' + esc(label) + ') with the teacher list from this PDF?</b></p>' +
-        '<div class="row"><button type="button" class="btn" data-act="yes">Yes, replace it</button><button type="button" class="btn sec" data-act="no">No, keep my CSV</button></div>' +
-        '<p class="muted" style="margin:6px 0 0">Until you choose, your CSV stays as the teacher list.</p></div>';
-    } else h += '<p class="muted">The teacher list was then updated from this PDF.</p>';
-    return h;
-  }
-  var teacherPanel = makePanel('t', {
-    emptyMsg: 'No lessons found. Is this the aSc teacher-timetable PDF (landscape, one teacher per page)?',
-    analyze: function (pages, fileName) {
-      var res = pages.map(function (pg, i) { var r = TT.parseTeacherPage(pg, i + 1); r.page = i + 1; return r; });
+      log('Reading the Teacher PDF…');
+      var tp = await TT.readPdf(pdfjsLib, new Uint8Array(await readAB(tf)), function (i, n) { progress(i, n); });
+      var res = tp.map(function (pg, i) { var r = TT.parseTeacherPage(pg, i + 1); r.page = i + 1; return r; });
       var problems = []; res.forEach(function (r) { problems = problems.concat(r.problems); });
       TT.finalizeTeacherCards(res);
-      // check against the loaded list (from a CSV or an earlier Teacher PDF) before it is replaced
-      var listBefore = hasList(), labelBefore = TL.label, keepCsv = TL.source === 'csv';
-      var rep = listBefore ? TT.verifyTeacherList(res, TL.names) : null;
-      var out = TT.teacherRows(res);
-      if (!out.lessons.length) return null;
-      var v = TT.validateTeacher(res, out.recs);
-      tch.pages = res; tch.recs = out.recs;
-      var nf = TT.namesFromPages(res);
-      var fromPdf = { names: nf.names, source: 'pdf', label: 'Teacher PDF ' + fileName, leftOut: nf.leftOut };
-      pendingTL = null;
-      if (keepCsv) pendingTL = fromPdf; else TL = fromPdf;
-      renderList();
-      var count = function (k) { return out.lessons.filter(function (l) { return l.kind === k; }).length; };
-      var w = '';
-      if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
-      if (v.noCode.length) w += '<p class="warn">Could not work out the teacher code for: ' + esc(v.noCode.slice(0, 8).join(', ')) + (v.noCode.length > 8 ? ', …' : '') + '. Their rows use the name instead of a code.</p>';
-      if (!problems.length && !v.noCode.length) w += '<p class="ok">Check passed: every lesson was placed and every teacher has a code.</p>';
-      w += listCheckHtml(rep, labelBefore, keepCsv ? 'ask' : 'replaced');
+      var tout = TT.teacherRows(res);
+      var named = res.filter(function (r) { return /\([^)]+\)\s*$/.test(r.name || ''); }).length;
+      if (named < Math.ceil(res.length * 0.8))
+        throw new Error('The Teacher PDF does not look like a teacher timetable: names such as “CHAN Clara (Chinese)” were found on only ' + named + ' of ' + res.length + ' pages. Did you choose the Class PDF in the Teacher box?');
+      if (!tout.lessons.length) throw new Error('No lessons found in the Teacher PDF. Is it the aSc teacher-timetable PDF?');
+      var tv = TT.validateTeacher(res, tout.recs);
+      log('Teacher PDF: ' + res.length + ' teacher pages, ' + tout.lessons.length + ' entries (lessons, meetings, support), ' + tout.recs.length + ' rows.', 'ok');
+      problems.slice(0, 5).forEach(function (p) { log(p, 'warn'); });
+      if (tv.noCode.length) log('No teacher code found for: ' + tv.noCode.slice(0, 5).join(', '), 'warn');
       var empties = res.filter(function (r) { return !r.cards.length; }).map(function (r) { return r.name; });
-      if (empties.length) w += '<p class="err"><b>' + empties.length + ' teacher page(s) have no lessons: ' + esc(empties.slice(0, 6).join(', ')) + (empties.length > 6 ? ', …' : '') + '.</b></p>';
-      if (v.clashes.length) w += '<p class="muted">' + v.clashes.length + ' period(s) where a teacher has two lessons at the same time (both are listed): ' + esc(v.clashes.slice(0, 5).join('; ')) + (v.clashes.length > 5 ? '; …' : '') + '.</p>';
-      var unk = out.recs.filter(function (r) { return r.unknownTeachers; });
-      if (unk.length) w += '<p class="warn">' + unk.length + ' row(s) are lessons in a clash cell where the PDF does not print the teacher list and it could not be found on another teacher\u2019s page, so the venue was not matched: ' + esc(unk.slice(0, 4).map(function (r) { return r.tname + ' ' + r.day + ' P' + r.period + ' (' + String(r.subject).split('\n')[0] + ')'; }).join('; ')) + (unk.length > 4 ? '; …' : '') + '. They are flagged in the “Pairing” column.</p>';
-      var unmatched = out.recs.filter(function (r) { return r.unmatched; });
-      if (unmatched.length) {
-        w += '<p class="muted">' + unmatched.length.toLocaleString() + ' row(s) are teachers with no venue (or subject) of their own because the lesson has more teachers than venues (or subjects). Their Venue/Subject cell shows the full list, a line break, then the teacher list. They are flagged in the “Pairing” column.</p>';
-        w += breakdownHtml(unmatched);
-      }
-      return {
-        total: out.recs.length,
-        stats: [['Teacher pages', res.length], ['Lessons', count('Lesson')], ['Meetings', count('Meeting')], ['Support', count('Support')], ['Excel rows', out.recs.length], ['Clash periods', v.clashes.length]],
-        warnHtml: w,
-        head: ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Lesson/Meeting/Support', 'Subject', 'Pairing'],
-        rows: out.recs.slice(0, 10).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.kind, r.subject, r.status]; })
-      };
-    },
-    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildTeacherDbWorkbook(ExcelJS, tch.recs, tch.pages, { fileName: st.fileName }); } },
-    btn2: { suffix: '_teacher_timetables.xlsx', build: function () { return TT.buildTeacherTimetableWorkbook(ExcelJS, tch.pages); } }
-  });
+      if (empties.length) log(empties.length + ' teacher page(s) have no lessons: ' + empties.slice(0, 6).join(', ') + '.', 'err');
 
-  $('t-warns').addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('button[data-act]') : null;
-    if (!b || !pendingTL) return;
-    var ask = $('t-ask');
-    if (b.getAttribute('data-act') === 'yes') {
-      TL = pendingTL; pendingTL = null; renderList();
-      if (ask) ask.innerHTML = '<p class="ok" style="margin:0"><b>Done: the teacher list was replaced with the list from this PDF.</b></p>';
-    } else {
-      pendingTL = null;
-      if (ask) ask.innerHTML = '<p class="muted" style="margin:0">OK: your uploaded CSV stays as the teacher list.</p>';
+      var cc = crossCheck(tout.recs, recs), check;
+      if (!cc.onlyT && !cc.onlyC) { check = 'The Teacher PDF and the Class PDF agree on all ' + cc.matched + ' lesson rows.'; log('Cross-check: ' + check, 'ok'); }
+      else { check = cc.matched + ' lesson rows agree; ' + cc.onlyT + ' are only in the Teacher PDF and ' + cc.onlyC + ' only in the Class PDF.'; log('Cross-check: ' + check, 'warn'); }
+
+      log('Building the workbooks…'); await tick();
+      var names = TT.namesFromPages(res).names;
+      var books = {
+        teacherDB: await TT.buildTeacherDbWorkbook(ExcelJS, tout.recs, res, { fileName: tf.name }),
+        classDB: await TT.buildWorkbook(ExcelJS, lessons, recs, names, { fileName: cf.name })
+      };
+      await finish(books, lessons, { sources: 'Teacher PDF: ' + tf.name + '   |   Class PDF: ' + cf.name + '   |   Generated in the browser; the PDFs are not uploaded anywhere.', check: check }, res);
+    } catch (e) {
+      console.error(e);
+      log('Problem: ' + e.message, 'err');
     }
-  });
+    $('prog').hidden = true; busy = false; refresh();
+  }
 
-  // ====================== CLASS TAB ======================
-  var cls = { lessons: null, recs: null };
-  var classPanel = makePanel('c', {
-    emptyMsg: 'No lessons found. Is this the aSc class-timetable PDF (landscape, one class per page)?',
-    analyze: function (pages) {
-      var lessons = [], problems = [];
-      pages.forEach(function (pg, i) { var r = TT.parsePage(pg, i + 1); lessons = lessons.concat(r.lessons); problems = problems.concat(r.problems); });
-      if (!lessons.length) return null;
-      var v = TT.validate(lessons), recs = TT.expandRows(lessons);
-      cls.lessons = lessons; cls.recs = recs;
-      var doubles = lessons.filter(function (l) { return l.span > 1; }).length;
-      var unpaired = recs.filter(function (r) { return r.unmatched; }).length;
-      var paired = recs.length - unpaired, groups = recs.filter(function (r) { return r.group; }).length;
-      var w = '';
-      if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
-      if (v.warn.length) w += '<p class="warn"><b>Overlapping lessons:</b></p><ul class="w">' + v.warn.slice(0, 8).map(esc).map(li).join('') + '</ul>';
-      if (v.notFull.length) w += '<p class="warn">' + v.notFull.length + ' class-day(s) do not add up to 7 periods (' + esc(v.notFull.slice(0, 8).join(', ')) + (v.notFull.length > 8 ? ', …' : '') + '). This can be normal for a nearly empty class page, but please check them against the PDF.</p>';
-      if (!problems.length && !v.warn.length && !v.notFull.length) w += '<p class="ok">Check passed: every class-day adds up to 7 periods with no overlaps.</p>';
-      if (unpaired) {
-        w += '<p class="muted">' + unpaired.toLocaleString() + ' row(s) are teachers with no venue (or subject) of their own because the lesson has more teachers than venues (or subjects). Their Venue/Subject cell shows the full list, a line break, then the teacher list. They are flagged in the “Pairing” column.</p>';
-        w += breakdownHtml(recs.filter(function (r) { return r.unmatched; }));
-      }
-      return {
-        total: recs.length,
-        stats: [['Class pages', pages.length], ['Lessons', lessons.length], ['Double periods', doubles], ['Excel rows', recs.length], ['Paired rows', paired - groups], ['Group session rows', groups], ['No own venue/subject', unpaired]],
-        warnHtml: w,
-        head: ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Subject', 'Pairing'],
-        rows: recs.slice(0, 10).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.subject, r.status]; })
-      };
-    },
-    onStart: function () { resetFree(); },
-    onDone: function () { $('tab-add').hidden = false; },
-    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildWorkbook(ExcelJS, cls.lessons, cls.recs, TL.names, { fileName: st.fileName }); } },
-    btn2: { suffix: '_class_timetables.xlsx', build: function () { return TT.buildClassWorkbook(ExcelJS, cls.lessons); } }
-  });
+  async function finish(books, lessons, info, teacherPages) {
+    log('Preparing the sheets…'); await tick();
+    var dbSpecs = ConvertTT.buildDbSpecs(books, info);
+    state = { lessons: lessons, dbSpecs: dbSpecs, freeSpec: null, links: {}, analysis: null };
+    var dName = fileName('nameD') + '.xlsx';
+    setFile('db', dName, await buildMainBlob());
+    log('Database workbook: ' + dbSpecs.map(function (s) { return s.name; }).join(', ') + '.', 'hl');
+    var timetables = [];
+    if ($('mk').checked) {
+      var cName = fileName('nameC') + '.xlsx', tName = fileName('nameT') + '.xlsx';
+      log('Building the class timetables…'); await tick();
+      var cb = await TT.buildClassWorkbook(ExcelJS, lessons);
+      setFile('cls', cName, await toBlob(cb));
+      log('Done: ' + cb.worksheets.length + ' sheets in ' + cName, 'hl');
+      log('Building the teacher timetables…'); await tick();
+      var tb = await TT.buildTeacherTimetableWorkbook(ExcelJS, teacherPages);
+      setFile('tch', tName, await toBlob(tb));
+      log('Done: ' + tb.worksheets.length + ' sheets in ' + tName, 'hl');
+    }
+    log('All done.', 'hl hl-done');
+    downloadLine('db'); if (urls.cls) downloadLine('cls'); if (urls.tch) downloadLine('tch');
+    $('after').hidden = false;
+  }
 
-  // ====================== FREE LESSON ATTENDANCE TAB ======================
-  var free = null;   // { levels: {1..6: bool}, maps: {level: {code: 'E1'|'E2'|'E3'|''}}, analysis, result }
-  var FREE_LEVELS = [1, 2, 3, 4, 5, 6];
-  function resetFree() {
-    free = null;
-    $('tab-add').hidden = true; $('tab-free').hidden = true;
-    var wasActive = $('tab-free').getAttribute('aria-selected') === 'true';
-    $('panel-free').hidden = true;
-    if (wasActive) showTab('class');
-  }
-  function openFree() {
-    if (!cls.lessons) return;
-    var an = TT.freeAnalyse(cls.lessons), maps = {};
-    Object.keys(an.mapLevels).forEach(function (lv) {
-      maps[lv] = {}; an.mapLevels[lv].codes.forEach(function (code) { maps[lv][code] = TT.freeDefaultE(code); });
-    });
-    free = { levels: { 1: false, 2: false, 3: false, 4: true, 5: true, 6: true }, maps: maps, analysis: an, result: null };
-    $('f-levels').innerHTML = FREE_LEVELS.map(function (l) {
-      return '<label class="chk"><input type="checkbox" data-level="' + l + '"' + (free.levels[l] ? ' checked' : '') + '> S' + l + '</label>';
-    }).join('');
-    $('tab-add').hidden = true; $('tab-free').hidden = false;
-    renderFree();
-    showTab('free');
-    scrollToTop();
-  }
-  // after the button (at the bottom of step 3) is clicked, show the new tab from its top
-  function scrollToTop() {
-    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    try { window.scrollTo({ top: 0, left: 0, behavior: calm ? 'auto' : 'smooth' }); }
-    catch (e) { try { window.scrollTo(0, 0); } catch (e2) { /* ignore */ } }
-  }
-  // order of the mapping rows: by the default elective number (E1, E2, E3, then the rest), then by name
+  // ====================== FREE LESSON ATTENDANCE WINDOW ======================
+  var LEVELS = [1, 2, 3, 4, 5, 6], free = null;
   function sortedCodes(codes) {
     var rank = function (c) { var e = TT.freeDefaultE(c); return e ? +e.charAt(1) : 4; };
     return codes.slice().sort(function (a, b) { return (rank(a) - rank(b)) || (a < b ? -1 : a > b ? 1 : 0); });
   }
-  function selectedLevels() { return FREE_LEVELS.filter(function (l) { return free.levels[l]; }); }
-
-  function renderFree() { renderMaps(); renderResult(); }
-  // mapping tables: only for ticked levels that have a class needing a mapping (redrawn only when the ticks change,
-  // so a dropdown keeps keyboard focus while it is being used)
+  function selected() { return LEVELS.filter(function (l) { return free.levels[l]; }); }
   function renderMaps() {
-    if (!free) return;
-    var html = '', need = Object.keys(free.analysis.mapLevels).filter(function (lv) { return free.levels[lv]; });
+    var need = Object.keys(free.analysis.mapLevels).filter(function (lv) { return free.levels[lv]; }), html = '';
     need.forEach(function (lv) {
       var m = free.analysis.mapLevels[lv];
-      html += '<div class="mapblock"><p style="margin:8px 0 4px"><b>S' + lv + '</b> <span class="muted">applies to ' + esc(m.classes.join(', ')) + '</span></p>' +
-        '<table class="mini"><tr><th>Subject</th><th>Elective</th></tr>' +
+      html += '<div style="margin:8px 0"><b>S' + lv + '</b> <span class="muted">applies to ' + esc(m.classes.join(', ')) + '</span>' +
+        '<table><tr><th>Subject</th><th>Elective</th></tr>' +
         sortedCodes(m.codes).map(function (code) {
           var cur = (free.maps[lv] || {})[code] || '';
           return '<tr><td>' + esc(code) + '</td><td><select data-level="' + lv + '" data-code="' + esc(code) + '">' +
@@ -1435,105 +1467,94 @@ function finalizeTeacherCards(pagesResult){
             '</select></td></tr>';
         }).join('') + '</table></div>';
     });
-    $('f-maps').innerHTML = html; $('f-mapcard').hidden = !need.length;
-    $('f-resultTitle').textContent = (need.length ? '3' : '2') + '. Result';
+    $('fMaps').innerHTML = html; $('fMapCard').hidden = !need.length;
+    $('fResTitle').textContent = (need.length ? '3' : '2') + '. Result';
   }
   function renderResult() {
-    if (!free) return;
-    hideConfirm();
-    var levels = selectedLevels();
-    var r = TT.freeRows(cls.lessons, levels, free.maps);
+    $('fConfirm').hidden = true; $('fDone').textContent = '';
+    var levels = selected(), r = TT.freeRows(state.lessons, levels, free.maps);
     free.result = r;
     var classes = {}; r.rows.forEach(function (x) { classes[x.cls] = true; });
     var eRows = r.rows.filter(function (x) { return /-E[123]$/.test(x.subject); }).length;
-    $('f-stats').innerHTML = [['Rows', r.rows.length], ['Classes', Object.keys(classes).length], ['Levels ticked', levels.length], ['Elective rows (E1–E3)', eRows]]
-      .map(function (s) { return '<div class="stat"><b>' + Number(s[1]).toLocaleString() + '</b>' + s[0] + '</div>'; }).join('');
+    $('fStats').innerHTML = [['Rows', r.rows.length], ['Classes', Object.keys(classes).length], ['Levels ticked', levels.length], ['Elective rows (E1–E3)', eRows]]
+      .map(function (s) { return '<div class="stat"><b>' + s[1] + '</b>' + s[0] + '</div>'; }).join('');
     var w = '';
-    if (!levels.length) w += '<p class="warn">Tick at least one level.</p>';
-    if (r.notes.length) w += '<ul class="w">' + r.notes.map(esc).map(function (n) { return '<li class="err">' + n + '</li>'; }).join('') + '</ul>';
-    $('f-warns').innerHTML = w;
-    $('f-prev').innerHTML = '<tr><th>Subject</th><th>Day</th><th>Period</th></tr>' +
+    if (!levels.length) w += '<p class="muted">Tick at least one level.</p>';
+    if (r.notes.length) w += '<ul class="w">' + r.notes.map(function (n) { return '<li class="err">' + esc(n) + '</li>'; }).join('') + '</ul>';
+    $('fWarns').innerHTML = w;
+    $('fPrev').innerHTML = '<tr><th>Subject</th><th>Day</th><th>Period</th></tr>' +
       r.rows.slice(0, 10).map(function (x) { return '<tr><td>' + esc(x.subject) + '</td><td>' + x.day + '</td><td>' + x.period + '</td></tr>'; }).join('');
-    var base = (classPanel.state.fileName || '').replace(/\.pdf$/i, '') || 'timetable';
-    $('f-files').textContent = 'File: ' + base + '_free_lesson_attendance.xlsx';
-    $('f-dl').disabled = !r.rows.length;
+    $('fWrite').disabled = !r.rows.length;
   }
-  function hideConfirm() { $('f-confirm').hidden = true; }
-  // clicking Download with warnings asks first; Yes continues, No goes back
-  function downloadFree() {
-    if (!free || !free.result || !free.result.rows.length) return Promise.resolve();
-    var n = free.result.notes.length;
-    if (n) {
-      $('f-confirmText').textContent = 'There ' + (n === 1 ? 'is 1 warning' : 'are ' + n + ' warnings') + ' above. Download anyway?';
-      $('f-confirm').hidden = false;
-      return Promise.resolve();
-    }
-    return doDownloadFree();
+  function renderAll() { renderMaps(); renderResult(); }
+  function freeSpec(rows) {
+    var values = [['Subject', 'Day', 'Period']].concat(rows.map(function (r) { return [r.subject, r.day, r.period]; }));
+    var styles = [
+      { bg: '#1F3864', fg: '#FFFFFF', b: true, sz: 10, fam: 'Arial', h: 'center', v: 'middle', w: false },
+      { sz: 10, fam: 'Arial', h: 'normal', v: 'bottom', w: false },
+      { sz: 10, fam: 'Arial', h: 'center', v: 'bottom', w: false }
+    ];
+    return {
+      name: 'Free lesson attendance', cols: 3, values: values, styles: styles,
+      styleIdx: values.map(function (_, i) { return i === 0 ? [0, 0, 0] : [1, 2, 2]; }),
+      textRanges: [], borders: [], merges: [],
+      colWidths: [{ start: 1, count: 1, px: 170 }, { start: 2, count: 2, px: 70 }],
+      rowHeights: [{ start: 1, count: 1, px: 32 }], autoRows: false, frozenRows: 1, frozenCols: 0, filter: 'A1:C' + values.length
+    };
   }
-  async function doDownloadFree() {
-    hideConfirm();
-    if (!free || !free.result || !free.result.rows.length) return;
-    var btn = $('f-dl'), old = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
+  async function doAdd() {
+    $('fConfirm').hidden = true;
+    var btn = $('fWrite'); btn.disabled = true; $('fDone').innerHTML = '<span class="muted">Adding…</span>';
     try {
-      var wb = await TT.buildFreeWorkbook(ExcelJS, free.result.rows);
-      var buf = await wb.xlsx.writeBuffer();
-      var base = (classPanel.state.fileName || '').replace(/\.pdf$/i, '') || 'timetable';
-      saveBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), base + '_free_lesson_attendance.xlsx');
-    } catch (e) { console.error(e); $('f-warns').innerHTML = '<p class="err">Could not build the Excel file: ' + esc(e.message) + '</p>'; }
-    btn.textContent = old; btn.disabled = false;
+      state.freeSpec = freeSpec(free.result.rows);
+      setFile('db', urls.db.name, await buildMainBlob());
+      downloadLine('db', '(includes Free lesson attendance)');
+      $('fDone').innerHTML = '<div class="hl green">Done: ' + free.result.rows.length + ' rows added to the sheet “Free lesson attendance”. Download the database file again from the log.</div>';
+      btn.textContent = 'Replace sheet “Free lesson attendance”';
+    } catch (e) { console.error(e); $('fDone').innerHTML = '<span class="err">Could not build the Excel file: ' + esc(e.message) + '</span>'; }
+    btn.disabled = false;
   }
-  $('tab-add').addEventListener('click', openFree);
-  $('f-dl').addEventListener('click', downloadFree);
-  $('f-yes').addEventListener('click', doDownloadFree);
-  $('f-no').addEventListener('click', hideConfirm);
-  function setAllLevels(on) {
-    if (!free) return;
-    FREE_LEVELS.forEach(function (l) { free.levels[l] = on; });
-    Array.prototype.forEach.call(document.querySelectorAll('#f-levels input'), function (i) { i.checked = on; });
-    renderFree();
+  function onAdd() {
+    var n = free.result.notes.length;
+    if (n) { $('fConfirmText').textContent = 'There ' + (n === 1 ? 'is 1 warning' : 'are ' + n + ' warnings') + ' above. Add the sheet anyway?'; $('fConfirm').hidden = false; return; }
+    doAdd();
   }
-  $('f-all').addEventListener('click', function () { setAllLevels(true); });
-  $('f-none').addEventListener('click', function () { setAllLevels(false); });
-  $('f-levels').addEventListener('change', function (e) {
-    var lv = e.target && e.target.getAttribute && e.target.getAttribute('data-level');
-    if (!lv || !free) return; free.levels[lv] = !!e.target.checked; renderFree();
-  });
-  $('f-maps').addEventListener('change', function (e) {
-    var t = e.target; if (!t || t.tagName !== 'SELECT' || !free) return;
-    free.maps[t.getAttribute('data-level')][t.getAttribute('data-code')] = t.value; renderResult();
-  });
+  function setAll(on) { LEVELS.forEach(function (l) { free.levels[l] = on; });
+    Array.prototype.forEach.call(document.querySelectorAll('#fLevels input'), function (i) { i.checked = on; }); renderAll(); }
+  function openFree() {
+    if (!state) return;
+    var an = TT.freeAnalyse(state.lessons), maps = {};
+    Object.keys(an.mapLevels).forEach(function (lv) { maps[lv] = {}; an.mapLevels[lv].codes.forEach(function (c) { maps[lv][c] = TT.freeDefaultE(c); }); });
+    free = { levels: { 1: false, 2: false, 3: false, 4: true, 5: true, 6: true }, maps: maps, analysis: an, result: null };
+    $('fLevels').innerHTML = LEVELS.map(function (l) { return '<label class="chk"><input type="checkbox" data-level="' + l + '"' + (free.levels[l] ? ' checked' : '') + '> S' + l + '</label>'; }).join('');
+    // warn before anything is replaced
+    if (state.freeSpec) { $('fExist').hidden = false; $('fExist').innerHTML = '<b>The sheet “Free lesson attendance” is already in the database workbook and will be replaced.</b>'; $('fWrite').textContent = 'Replace sheet “Free lesson attendance”'; }
+    else { $('fExist').hidden = true; $('fWrite').textContent = 'Add sheet “Free lesson attendance” to the database workbook'; }
+    $('fDone').textContent = '';
+    $('freeModal').hidden = false; renderAll();
+  }
+  function closeFree() { $('freeModal').hidden = true; }
 
-  // ====================== TABS ======================
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
-  function showTab(name, focus) {
-    tabs.forEach(function (t) {
-      var on = t.getAttribute('data-tab') === name;
-      t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1;
-      $('panel-' + t.getAttribute('data-tab')).hidden = !on;
-      if (on && focus) t.focus();
-    });
-    try { history.replaceState(null, '', '#' + name); } catch (e) { /* ignore (e.g. file:// previews) */ }
-  }
-  tabs.forEach(function (t, i) {
-    t.addEventListener('click', function () { showTab(t.getAttribute('data-tab')); });
-    t.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-        var vis = tabs.filter(function (x) { return !x.hidden; }), at = vis.indexOf(t);
-        var n = vis[(at + (e.key === 'ArrowRight' ? 1 : vis.length - 1)) % vis.length]; showTab(n.getAttribute('data-tab'), true); e.preventDefault();
-      }
-    });
-  });
-  if (location.hash === '#class') showTab('class');
-  renderList();
+  $('fLevels').addEventListener('change', function (e) { var lv = e.target.getAttribute && e.target.getAttribute('data-level'); if (lv) { free.levels[lv] = !!e.target.checked; renderAll(); } });
+  $('fMaps').addEventListener('change', function (e) { var t = e.target; if (t.tagName === 'SELECT') { free.maps[t.getAttribute('data-level')][t.getAttribute('data-code')] = t.value; renderResult(); } });
+  $('fAll').addEventListener('click', function () { setAll(true); });
+  $('fNone').addEventListener('click', function () { setAll(false); });
+  $('fWrite').addEventListener('click', onAdd);
+  $('fYes').addEventListener('click', doAdd);
+  $('fNo').addEventListener('click', function () { $('fConfirm').hidden = true; });
+  $('fClose').addEventListener('click', closeFree);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('freeModal').hidden) closeFree(); });
+  $('toFree').addEventListener('click', openFree);
 
-  window.__tt = {
-    showTab: showTab,
-    list: { upload: handleNames, download: downloadList, get: function () { return TL; }, prefix: function () { return prefix; }, pending: function () { return pendingTL; } },
-    cls: { handlePdf: classPanel.handlePdf, download: classPanel.downloadDb, downloadClasses: classPanel.downloadSecond, state: cls },
-    free: { open: openFree, reset: resetFree, state: function () { return free; }, download: downloadFree, confirmed: doDownloadFree },
-    teacher: { handlePdf: teacherPanel.handlePdf, download: teacherPanel.downloadDb, downloadTeachers: teacherPanel.downloadSecond, state: tch }
-  };
+  ['cpdf', 'tpdf'].forEach(function (id) { $(id).addEventListener('change', function () { checkNames(); defaultNames(); refresh(); }); });
+  ['D', 'C', 'T'].forEach(function (k) { $('name' + k).addEventListener('input', function () { edited[k] = true; refresh(); }); });
+  $('mk').addEventListener('change', refresh);
+  $('go').addEventListener('click', importPdfs);
+  if (!window.pdfjsLib || !window.ExcelJS) $('libwarn').hidden = false;
+  refresh();
+  window.__app = { importPdfs: importPdfs, openFree: openFree, state: function () { return state; }, urls: function () { return urls; }, free: function () { return free; } };
 })();
+
 </script>
 </body>
 </html>
