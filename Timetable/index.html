@@ -77,8 +77,9 @@
 <div class="modal" id="freeModal" hidden role="dialog" aria-modal="true" aria-label="Free lesson attendance">
  <div class="modalbox">
   <h1>Free lesson attendance</h1>
-  <p class="sub">Built from the class lessons of the Class PDF. One row per class, day and period (<code>Subject | Day | Period</code>), for example <code>S4A-MA</code>. For S4–S6 the electives are shown as E1, E2 or E3. The result is added to the database workbook as the sheet <b>Free lesson attendance</b> (an existing sheet with that name is replaced).</p>
+  <p class="sub">Built from the class lessons of the Class PDF. One row per class, day and period (<code>Subject | Day | Period</code>), for example <code>S4A-MA</code>. For S4–S6 the electives are shown as E1, E2 or E3. The result is a <b>separate Excel file</b> with one sheet, <b>Free lesson attendance</b>.</p>
   <div id="fExist" class="warnbox" hidden></div>
+  <div class="row"><label class="lbl" for="fName">File name</label><input type="text" id="fName" placeholder="(Class PDF name)_free_lesson_attendance"> <span class="muted">.xlsx</span></div>
   <div class="card">
     <div class="row" style="margin-bottom:8px"><h2 style="margin:0">1. Levels</h2>
       <button type="button" class="btn sec" id="fAll">Select all</button><button type="button" class="btn sec" id="fNone">Unselect all</button></div>
@@ -93,10 +94,10 @@
     <h2 id="fResTitle">2. Result</h2>
     <div class="stats" id="fStats"></div>
     <div id="fWarns"></div>
-    <div class="row" style="margin:8px 0"><button class="btn" id="fWrite">Add sheet “Free lesson attendance” to the database workbook</button><button class="btn sec" id="fClose">Close</button></div>
+    <div class="row" style="margin:8px 0"><button class="btn" id="fWrite">Create the Excel file</button><button class="btn sec" id="fClose">Close</button></div>
     <div class="confirm" id="fConfirm" hidden>
       <p style="margin:0 0 6px"><b id="fConfirmText"></b></p>
-      <div class="row"><button class="btn" id="fYes">Yes, add it anyway</button><button class="btn sec" id="fNo">No, go back</button></div>
+      <div class="row"><button class="btn" id="fYes">Yes, create it anyway</button><button class="btn sec" id="fNo">No, go back</button></div>
     </div>
     <div id="fDone"></div>
     <h2 style="margin-top:12px">Preview (first 10 rows)</h2>
@@ -1290,7 +1291,7 @@ function finalizeTeacherCards(pagesResult){
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-  var busy = false, edited = { D: false, C: false, T: false }, state = null;
+  var busy = false, edited = { D: false, C: false, T: false, F: false }, state = null;
 
   if (window.pdfjsLib && pdfjsLib.GlobalWorkerOptions) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -1345,8 +1346,7 @@ function finalizeTeacherCards(pagesResult){
   }
   async function toBlob(wb) { return new Blob([await wb.xlsx.writeBuffer()], { type: XLSX_MIME }); }
   async function buildMainBlob() {
-    var specs = state.dbSpecs.concat(state.freeSpec ? [state.freeSpec] : []);
-    return toBlob(XlsxWriter.buildMainWorkbook(ExcelJS, specs, ConvertTT.DB_ORDER));
+    return toBlob(XlsxWriter.buildMainWorkbook(ExcelJS, state.dbSpecs, ConvertTT.DB_ORDER));
   }
   //  a big download link line (used after "All done.")
   function downloadLine(key, note) {
@@ -1426,7 +1426,7 @@ function finalizeTeacherCards(pagesResult){
   async function finish(books, lessons, info, teacherPages) {
     log('Preparing the sheets…'); await tick();
     var dbSpecs = ConvertTT.buildDbSpecs(books, info);
-    state = { lessons: lessons, dbSpecs: dbSpecs, freeSpec: null, links: {}, analysis: null };
+    state = { lessons: lessons, dbSpecs: dbSpecs, links: {}, analysis: null };
     var dName = fileName('nameD') + '.xlsx';
     setFile('db', dName, await buildMainBlob());
     log('Database workbook: ' + dbSpecs.map(function (s) { return s.name; }).join(', ') + '.', 'hl');
@@ -1502,22 +1502,28 @@ function finalizeTeacherCards(pagesResult){
       rowHeights: [{ start: 1, count: 1, px: 32 }], autoRows: false, frozenRows: 1, frozenCols: 0, filter: 'A1:C' + values.length
     };
   }
-  async function doAdd() {
+  async function doCreate() {
     $('fConfirm').hidden = true;
-    var btn = $('fWrite'); btn.disabled = true; $('fDone').innerHTML = '<span class="muted">Adding…</span>';
+    var name = fileName('fName');
+    if (!name) { $('fDone').innerHTML = '<span class="err">Type a file name first.</span>'; return; }
+    var other = [fileName('nameD')].concat($('mk').checked ? [fileName('nameC'), fileName('nameT')] : []);
+    if (other.indexOf(name) >= 0) { $('fDone').innerHTML = '<span class="err">That file name is already used by another file. Choose a different name.</span>'; return; }
+    var btn = $('fWrite'); btn.disabled = true; $('fDone').innerHTML = '<span class="muted">Creating…</span>';
     try {
-      state.freeSpec = freeSpec(free.result.rows);
-      setFile('db', urls.db.name, await buildMainBlob());
-      downloadLine('db', '(includes Free lesson attendance)');
-      $('fDone').innerHTML = '<div class="hl green">Done: ' + free.result.rows.length + ' rows added to the sheet “Free lesson attendance”. Download the database file again from the log.</div>';
-      btn.textContent = 'Replace sheet “Free lesson attendance”';
+      var wb = new ExcelJS.Workbook();
+      wb.creator = 'Timetable PDF to Excel';
+      XlsxWriter.addSpecSheet(wb, freeSpec(free.result.rows));
+      var f = setFile('free', name + '.xlsx', await toBlob(wb));
+      downloadLine('free', '(Free lesson attendance)');
+      $('fDone').innerHTML = '<div class="hl green">Done: ' + free.result.rows.length + ' rows written to the file ' + esc(f.name) + '.<br><a href="' + esc(f.url) + '" download="' + esc(f.name) + '">⬇ Download ' + esc(f.name) + '</a></div>';
+      btn.textContent = 'Create the Excel file again';
     } catch (e) { console.error(e); $('fDone').innerHTML = '<span class="err">Could not build the Excel file: ' + esc(e.message) + '</span>'; }
     btn.disabled = false;
   }
   function onAdd() {
     var n = free.result.notes.length;
-    if (n) { $('fConfirmText').textContent = 'There ' + (n === 1 ? 'is 1 warning' : 'are ' + n + ' warnings') + ' above. Add the sheet anyway?'; $('fConfirm').hidden = false; return; }
-    doAdd();
+    if (n) { $('fConfirmText').textContent = 'There ' + (n === 1 ? 'is 1 warning' : 'are ' + n + ' warnings') + ' above. Create the file anyway?'; $('fConfirm').hidden = false; return; }
+    doCreate();
   }
   function setAll(on) { LEVELS.forEach(function (l) { free.levels[l] = on; });
     Array.prototype.forEach.call(document.querySelectorAll('#fLevels input'), function (i) { i.checked = on; }); renderAll(); }
@@ -1527,9 +1533,11 @@ function finalizeTeacherCards(pagesResult){
     Object.keys(an.mapLevels).forEach(function (lv) { maps[lv] = {}; an.mapLevels[lv].codes.forEach(function (c) { maps[lv][c] = TT.freeDefaultE(c); }); });
     free = { levels: { 1: false, 2: false, 3: false, 4: true, 5: true, 6: true }, maps: maps, analysis: an, result: null };
     $('fLevels').innerHTML = LEVELS.map(function (l) { return '<label class="chk"><input type="checkbox" data-level="' + l + '"' + (free.levels[l] ? ' checked' : '') + '> S' + l + '</label>'; }).join('');
-    // warn before anything is replaced
-    if (state.freeSpec) { $('fExist').hidden = false; $('fExist').innerHTML = '<b>The sheet “Free lesson attendance” is already in the database workbook and will be replaced.</b>'; $('fWrite').textContent = 'Replace sheet “Free lesson attendance”'; }
-    else { $('fExist').hidden = true; $('fWrite').textContent = 'Add sheet “Free lesson attendance” to the database workbook'; }
+    // default file name (the user may change it) and a warning when the file was already created
+    var cf = $('cpdf').files[0];
+    if (!$('fName').value.trim() || !edited.F) $('fName').value = urls.free ? urls.free.name.replace(/\.xlsx$/i, '') : (cf ? base(cf) + '_free_lesson_attendance' : 'free_lesson_attendance');
+    if (urls.free) { $('fExist').hidden = false; $('fExist').innerHTML = '<b>The file “' + esc(urls.free.name) + '” was already created. Creating it again replaces it.</b>'; $('fWrite').textContent = 'Create the Excel file again'; }
+    else { $('fExist').hidden = true; $('fWrite').textContent = 'Create the Excel file'; }
     $('fDone').textContent = '';
     $('freeModal').hidden = false; renderAll();
   }
@@ -1540,7 +1548,7 @@ function finalizeTeacherCards(pagesResult){
   $('fAll').addEventListener('click', function () { setAll(true); });
   $('fNone').addEventListener('click', function () { setAll(false); });
   $('fWrite').addEventListener('click', onAdd);
-  $('fYes').addEventListener('click', doAdd);
+  $('fYes').addEventListener('click', doCreate);
   $('fNo').addEventListener('click', function () { $('fConfirm').hidden = true; });
   $('fClose').addEventListener('click', closeFree);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('freeModal').hidden) closeFree(); });
@@ -1548,6 +1556,7 @@ function finalizeTeacherCards(pagesResult){
 
   ['cpdf', 'tpdf'].forEach(function (id) { $(id).addEventListener('change', function () { checkNames(); defaultNames(); refresh(); }); });
   ['D', 'C', 'T'].forEach(function (k) { $('name' + k).addEventListener('input', function () { edited[k] = true; refresh(); }); });
+  $('fName').addEventListener('input', function () { edited.F = true; });
   $('mk').addEventListener('change', refresh);
   $('go').addEventListener('click', importPdfs);
   if (!window.pdfjsLib || !window.ExcelJS) $('libwarn').hidden = false;
