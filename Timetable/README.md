@@ -1,6 +1,6 @@
 # Timetable PDF → Excel
 
-🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/SchoolTimeTable/)**
+🔗 **[Click here to access the Live Tool](https://ycshea.github.io/school-admin/Timetable/)**
 
 A single-page web tool that turns the two PDF timetables exported from **aSc Timetables** (the **Class PDF** and the **Teacher PDF**) into **Excel files**:
 
